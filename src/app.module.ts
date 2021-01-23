@@ -14,8 +14,8 @@ import { AuthModule } from "./auth/auth.module";
 @Module({
   imports: [
     TypeOrmModule.forRoot({
-      type: "sqlite",
-      database: "db.sqlite3",
+      type: "postgres",
+      url: "postgres://jdkxlflokyfkoq:9b0f850937c6c2a04a8fd523a33098f648d122c8166741ce78bc6814c06e4ac5@ec2-3-208-168-0.compute-1.amazonaws.com:5432/d7e9p4eo1hgvr1",
       synchronize: true,
       logging: process.env.NODE_ENV !== "test",
       entities: [Podcast, Episode, User, Review]
