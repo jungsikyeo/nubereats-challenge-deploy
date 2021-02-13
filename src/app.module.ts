@@ -1,45 +1,70 @@
-import { Module, RequestMethod, MiddlewareConsumer } from "@nestjs/common";
-import { GraphQLModule } from "@nestjs/graphql";
-import { PodcastsModule } from "./podcast/podcasts.module";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { Podcast } from "./podcast/entities/podcast.entity";
-import { Episode } from "./podcast/entities/episode.entity";
-import { Review } from "./podcast/entities/review.entity";
-import { User } from "./users/entities/user.entity";
-import { UsersModule } from "./users/users.module";
-import { JwtModule } from "./jwt/jwt.module";
-import { JwtMiddleware } from "./jwt/jwt.middleware";
-import { AuthModule } from "./auth/auth.module";
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import * as Joi from 'joi';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { GraphQLModule } from '@nestjs/graphql';
+import { PodcastsModule } from './podcast/podcasts.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Podcast } from './podcast/entities/podcast.entity';
+import { Episode } from './podcast/entities/episode.entity';
+import { UsersModule } from './users/users.module';
+import { JwtModule } from './jwt/jwt.module';
+import { AuthModule } from './auth/auth.module';
+import { User } from './users/entities/user.entity';
+import { JwtMiddleware } from './jwt/jwt.middleware';
+import { Review } from './podcast/entities/review.entity';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: process.env.NODE_ENV === 'dev' ? '.env.dev' : '.env.test',
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('dev', 'production').required(),
+        DB_HOST: Joi.string(),
+        DB_PORT: Joi.string(),
+        DB_USERNAME: Joi.string(),
+        DB_PASSWORD: Joi.string(),
+        DB_NAME: Joi.string(),
+        PRIVATE_KEY: Joi.string().required(),
+      }),
+    }),
     TypeOrmModule.forRoot({
-      type: "postgres",
-      url: "postgres://jdkxlflokyfkoq:9b0f850937c6c2a04a8fd523a33098f648d122c8166741ce78bc6814c06e4ac5@ec2-3-208-168-0.compute-1.amazonaws.com:5432/d7e9p4eo1hgvr1",
-      synchronize: true,
-      logging: process.env.NODE_ENV !== "test",
-      ssl: { rejectUnauthorized: false },
-      entities: [Podcast, Episode, User, Review]
+      type: 'postgres',
+      ...(process.env.DATABASE_URL
+          ? { url: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+          : {
+            host: process.env.DB_HOST,
+            port: +process.env.DB_PORT,
+            username: process.env.DB_USERNAME,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+          }),
+      synchronize: process.env.NODE_ENV !== 'production',
+      logging: process.env.NODE_ENV !== 'production',
+      entities: [Podcast, Episode, User, Review],
     }),
     GraphQLModule.forRoot({
+      //playground: process.env.NODE_ENV !== 'production',
       autoSchemaFile: true,
-      context: ({ req }) => {
-        return { user: req["user"] };
-      }
+      context: ({ req }) => ({ user: req['user'] }),
     }),
     JwtModule.forRoot({
-      privateKey: "8mMJe5dMGORyoRPLvngA8U4aLTF3WasX"
+      privateKey: process.env.PRIVATE_KEY,
     }),
     PodcastsModule,
     UsersModule,
-    AuthModule
-  ]
+    AuthModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(JwtMiddleware).forRoutes({
-      path: "/graphql",
-      method: RequestMethod.POST
-    });
+  configure(consumer: MiddlewareConsumer): any {
+    consumer
+        .apply(JwtMiddleware)
+        .forRoutes({ path: '/graphql', method: RequestMethod.POST });
   }
 }
