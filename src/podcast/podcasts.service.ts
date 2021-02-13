@@ -1,37 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   CreateEpisodeInput,
   CreateEpisodeOutput,
-} from './dtos/create-episode.dto';
+} from "./dtos/create-episode.dto";
 import {
   CreatePodcastInput,
   CreatePodcastOutput,
-} from './dtos/create-podcast.dto';
-import { UpdateEpisodeInput } from './dtos/update-episode.dto';
-import { UpdatePodcastInput } from './dtos/update-podcast.dto';
-import { Episode } from './entities/episode.entity';
-import { Podcast } from './entities/podcast.entity';
-import { CoreOutput } from './dtos/output.dto';
+} from "./dtos/create-podcast.dto";
+import { UpdateEpisodeInput } from "./dtos/update-episode.dto";
+import { UpdatePodcastInput } from "./dtos/update-podcast.dto";
+import { Episode } from "./entities/episode.entity";
+import { Podcast } from "./entities/podcast.entity";
+import { CoreOutput } from "./dtos/output.dto";
 import {
   PodcastOutput,
   EpisodesOutput,
   EpisodesSearchInput,
   GetAllPodcastsOutput,
   GetEpisodeOutput,
-} from './dtos/podcast.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Raw } from 'typeorm';
+} from "./dtos/podcast.dto";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Raw } from "typeorm";
 import {
   SearchPodcastInput,
   SearchPodcastOutput,
-} from './dtos/search-podcast.dto';
+} from "./dtos/search-podcast.dto";
 import {
   CreateReviewInput,
   CreateReviewOutput,
-} from './dtos/create-review.dto';
-import { Review } from './entities/review.entity';
-import { User } from '../users/entities/user.entity';
-import { MyPodcastOutput } from './dtos/my-podcast.dto';
+} from "./dtos/create-review.dto";
+import { Review } from "./entities/review.entity";
+import { User } from "../users/entities/user.entity";
+import { MyPodcastOutput } from "./dtos/my-podcast.dto";
 
 @Injectable()
 export class PodcastsService {
@@ -41,12 +41,12 @@ export class PodcastsService {
     @InjectRepository(Episode)
     private readonly episodeRepository: Repository<Episode>,
     @InjectRepository(Review)
-    private readonly reviewRepository: Repository<Review>,
+    private readonly reviewRepository: Repository<Review>
   ) {}
 
   private readonly InternalServerErrorOutput = {
     ok: false,
-    error: 'Internal server error occurred.',
+    error: "Internal server error occurred.",
   };
 
   async getAllPodcasts(): Promise<GetAllPodcastsOutput> {
@@ -63,7 +63,7 @@ export class PodcastsService {
 
   async createPodcast(
     user,
-    { title, category, description }: CreatePodcastInput,
+    { title, category, description }: CreatePodcastInput
   ): Promise<CreatePodcastOutput> {
     try {
       const newPodcast = this.podcastRepository.create({
@@ -86,7 +86,7 @@ export class PodcastsService {
     try {
       const podcast = await this.podcastRepository.findOne(
         { id },
-        { relations: ['episodes', 'createdUser'] },
+        { relations: ["episodes", "createdUser"] }
       );
       if (!podcast) {
         return {
@@ -175,7 +175,7 @@ export class PodcastsService {
     } catch {
       return {
         ok: false,
-        error: 'Could not find podcasts.',
+        error: "Could not find podcasts.",
       };
     }
   }
@@ -217,6 +217,7 @@ export class PodcastsService {
     title,
     category,
     imageUrl,
+    playTime,
   }: CreateEpisodeInput): Promise<CreateEpisodeOutput> {
     try {
       const { podcast, ok, error } = await this.getPodcast(podcastId);
@@ -227,6 +228,7 @@ export class PodcastsService {
         title,
         category,
         imageUrl,
+        playTime,
       });
       newEpisode.podcast = podcast;
       const { id } = await this.episodeRepository.save(newEpisode);
@@ -281,7 +283,7 @@ export class PodcastsService {
 
   async createReview(
     createdUser,
-    { podcastId, title, reviewText }: CreateReviewInput,
+    { podcastId, title, reviewText }: CreateReviewInput
   ): Promise<CreateReviewOutput> {
     try {
       const { podcast, ok, error } = await this.getPodcast(podcastId);
