@@ -2,33 +2,26 @@ import {
   ObjectType,
   Field,
   InputType,
-  registerEnumType
-} from "@nestjs/graphql";
-import { IsString, IsEmail } from "class-validator";
-import {
-  Column,
-  Entity,
-  BeforeInsert,
-  BeforeUpdate,
-  OneToMany,
-  ManyToMany,
-  JoinTable
-} from "typeorm";
-import { CoreEntity } from "./core.entity";
-import * as bcrypt from "bcrypt";
-import { InternalServerErrorException } from "@nestjs/common";
-import { Podcast } from "../../podcast/entities/podcast.entity";
-import { Episode } from "../../podcast/entities/episode.entity";
-import { Review } from "../../podcast/entities/review.entity";
+  registerEnumType,
+} from '@nestjs/graphql';
+import { IsString, IsEmail } from 'class-validator';
+import { Column, Entity, BeforeInsert, BeforeUpdate } from 'typeorm';
+import { CoreEntity } from './core.entity';
+import * as bcrypt from 'bcrypt';
+import { InternalServerErrorException } from '@nestjs/common';
+import { Review } from '../../podcast/entities/review.entity';
+import { OneToMany, ManyToMany, JoinTable } from 'typeorm';
+import { Podcast } from '../../podcast/entities/podcast.entity';
+import { Episode } from '../../podcast/entities/episode.entity';
 
 export enum UserRole {
-  Host = "Host",
-  Listener = "Listener"
+  Host = 'Host',
+  Listener = 'Listener',
 }
 
-registerEnumType(UserRole, { name: "UserRole" });
+registerEnumType(UserRole, { name: 'UserRole' });
 
-@InputType("UserInputType", { isAbstract: true })
+@InputType('UserInputType', { isAbstract: true })
 @ObjectType()
 @Entity()
 export class User extends CoreEntity {
@@ -42,15 +35,15 @@ export class User extends CoreEntity {
   @IsString()
   password: string;
 
-  @Column({ type: "simple-enum", enum: UserRole })
+  @Column({ type: 'enum', enum: UserRole })
   @Field((type) => UserRole)
   role: UserRole;
 
-  @OneToMany(() => Podcast, (podcast) => podcast.creator, { eager: true })
+  @OneToMany(() => Podcast, (podcast) => podcast.createdUser, { eager: true })
   @Field((type) => [Podcast])
   podcasts: Podcast[];
 
-  @OneToMany(() => Review, (review) => review.creator, { eager: true })
+  @OneToMany(() => Review, (review) => review.createdUser, { eager: true })
   @Field((type) => [Review])
   reviews: Review[];
 

@@ -1,37 +1,38 @@
-import { Resolver, Query, Mutation, Args } from "@nestjs/graphql";
-import { PodcastsService } from "./podcasts.service";
-import { Podcast } from "./entities/podcast.entity";
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { PodcastsService } from './podcasts.service';
+import { Podcast } from './entities/podcast.entity';
 import {
   CreatePodcastInput,
-  CreatePodcastOutput
-} from "./dtos/create-podcast.dto";
-import { CoreOutput } from "./dtos/output.dto";
+  CreatePodcastOutput,
+} from './dtos/create-podcast.dto';
+import { CoreOutput } from './dtos/output.dto';
 import {
   PodcastSearchInput,
   PodcastOutput,
   EpisodesOutput,
   EpisodesSearchInput,
-  GetAllPodcastsOutput
-} from "./dtos/podcast.dto";
-import { UpdatePodcastInput } from "./dtos/update-podcast.dto";
-import { Episode } from "./entities/episode.entity";
-import { Review } from "./entities/review.entity";
+  GetAllPodcastsOutput,
+} from './dtos/podcast.dto';
+import { UpdatePodcastInput } from './dtos/update-podcast.dto';
+import { Episode } from './entities/episode.entity';
 import {
   CreateEpisodeInput,
-  CreateEpisodeOutput
-} from "./dtos/create-episode.dto";
-import { UpdateEpisodeInput } from "./dtos/update-episode.dto";
-import { Role } from "src/auth/role.decorator";
+  CreateEpisodeOutput,
+} from './dtos/create-episode.dto';
+import { UpdateEpisodeInput } from './dtos/update-episode.dto';
+import { Role } from 'src/auth/role.decorator';
 import {
-  SearchPodcastsInput,
-  SearchPodcastsOutput
-} from "./dtos/search-podcasts.dto";
+  SearchPodcastInput,
+  SearchPodcastOutput,
+} from './dtos/search-podcast.dto';
+import { Review } from './entities/review.entity';
+import { AuthUser } from '../auth/auth-user.decorator';
+import { User } from '../users/entities/user.entity';
 import {
+  CreateReviewInput,
   CreateReviewOutput,
-  CreateReviewInput
-} from "./dtos/create-review.dto";
-import { AuthUser } from "src/auth/auth-user.decorator";
-import { User } from "src/users/entities/user.entity";
+} from './dtos/create-review.dto';
+import { MyPodcastOutput } from './dtos/my-podcast.dto';
 
 @Resolver((of) => Podcast)
 export class PodcastsResolver {
@@ -43,45 +44,50 @@ export class PodcastsResolver {
   }
 
   @Mutation((returns) => CreatePodcastOutput)
-  @Role(["Host"])
+  @Role(['Host'])
   createPodcast(
-    @AuthUser() user: User,
-    @Args("input") createPodcastInput: CreatePodcastInput
+    @AuthUser() authUser: User,
+    @Args('input') createPodcastInput: CreatePodcastInput,
   ): Promise<CreatePodcastOutput> {
-    return this.podcastsService.createPodcast(user, createPodcastInput);
+    return this.podcastsService.createPodcast(authUser, createPodcastInput);
   }
 
   @Query((returns) => PodcastOutput)
+  @Role(['Listener'])
   getPodcast(
-    @Args("input") podcastSearchInput: PodcastSearchInput
+    @Args('input') podcastSearchInput: PodcastSearchInput,
   ): Promise<PodcastOutput> {
     return this.podcastsService.getPodcast(podcastSearchInput.id);
   }
 
   @Mutation((returns) => CoreOutput)
-  @Role(["Host"])
+  @Role(['Host'])
   deletePodcast(
-    @AuthUser() user: User,
-    @Args("input") podcastSearchInput: PodcastSearchInput
+    @Args('input') podcastSearchInput: PodcastSearchInput,
   ): Promise<CoreOutput> {
-    return this.podcastsService.deletePodcast(user, podcastSearchInput.id);
+    return this.podcastsService.deletePodcast(podcastSearchInput.id);
   }
 
   @Mutation((returns) => CoreOutput)
-  @Role(["Host"])
+  @Role(['Host'])
   updatePodcast(
-    @AuthUser() user: User,
-    @Args("input") updatePodcastInput: UpdatePodcastInput
+    @Args('input') updatePodcastInput: UpdatePodcastInput,
   ): Promise<CoreOutput> {
-    return this.podcastsService.updatePodcast(user, updatePodcastInput);
+    return this.podcastsService.updatePodcast(updatePodcastInput);
   }
 
-  @Query((returns) => SearchPodcastsOutput)
-  @Role(["Listener"])
+  @Query((returns) => SearchPodcastOutput)
+  @Role(['Listener'])
   searchPodcasts(
-    @Args("input") searchPodcastsInput: SearchPodcastsInput
-  ): Promise<SearchPodcastsOutput> {
-    return this.podcastsService.searchPodcasts(searchPodcastsInput);
+    @Args('input') searchPodcastInput: SearchPodcastInput,
+  ): Promise<SearchPodcastOutput> {
+    return this.podcastsService.searchPodcasts(searchPodcastInput);
+  }
+
+  @Query((returns) => MyPodcastOutput)
+  @Role(['Host', 'Listener'])
+  myPodcasts(@AuthUser() createdUser: User): Promise<MyPodcastOutput> {
+    return this.podcastsService.myPodcasts(createdUser);
   }
 }
 
@@ -91,36 +97,33 @@ export class EpisodeResolver {
 
   @Query((returns) => EpisodesOutput)
   getEpisodes(
-    @Args("input") podcastSearchInput: PodcastSearchInput
+    @Args('input') podcastSearchInput: PodcastSearchInput,
   ): Promise<EpisodesOutput> {
     return this.podcastService.getEpisodes(podcastSearchInput.id);
   }
 
   @Mutation((returns) => CreateEpisodeOutput)
-  @Role(["Host"])
+  @Role(['Host'])
   createEpisode(
-    @AuthUser() user: User,
-    @Args("input") createEpisodeInput: CreateEpisodeInput
+    @Args('input') createEpisodeInput: CreateEpisodeInput,
   ): Promise<CreateEpisodeOutput> {
-    return this.podcastService.createEpisode(user, createEpisodeInput);
+    return this.podcastService.createEpisode(createEpisodeInput);
   }
 
   @Mutation((returns) => CoreOutput)
-  @Role(["Host"])
+  @Role(['Host'])
   updateEpisode(
-    @AuthUser() user: User,
-    @Args("input") updateEpisodeInput: UpdateEpisodeInput
+    @Args('input') updateEpisodeInput: UpdateEpisodeInput,
   ): Promise<CoreOutput> {
-    return this.podcastService.updateEpisode(user, updateEpisodeInput);
+    return this.podcastService.updateEpisode(updateEpisodeInput);
   }
 
   @Mutation((returns) => CoreOutput)
-  @Role(["Host"])
+  @Role(['Host'])
   deleteEpisode(
-    @AuthUser() user: User,
-    @Args("input") episodesSearchInput: EpisodesSearchInput
+    @Args('input') episodesSearchInput: EpisodesSearchInput,
   ): Promise<CoreOutput> {
-    return this.podcastService.deleteEpisode(user, episodesSearchInput);
+    return this.podcastService.deleteEpisode(episodesSearchInput);
   }
 }
 
@@ -128,12 +131,12 @@ export class EpisodeResolver {
 export class ReviewResolver {
   constructor(private readonly podcastService: PodcastsService) {}
 
-  @Mutation(() => CreateReviewOutput)
-  @Role(["Listener"])
+  @Mutation((returns) => CreateReviewOutput)
+  @Role(['Listener'])
   createReview(
-    @AuthUser() creator: User,
-    @Args("input") createReviewInput: CreateReviewInput
+    @AuthUser() createdUser: User,
+    @Args('input') createReviewInput: CreateReviewInput,
   ): Promise<CreateReviewOutput> {
-    return this.podcastService.createReview(creator, createReviewInput);
+    return this.podcastService.createReview(createdUser, createReviewInput);
   }
 }

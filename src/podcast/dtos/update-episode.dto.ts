@@ -4,12 +4,12 @@ import { EpisodesSearchInput } from './podcast.dto';
 
 @InputType()
 export class UpdateEpisodeInput extends EpisodesSearchInput {
-  @Field(type => String, { nullable: true })
+  @Field((type) => String, { nullable: true })
   @IsString()
   @IsOptional()
   readonly title?: string;
 
-  @Field(type => String, { nullable: true })
+  @Field((type) => String, { nullable: true })
   @IsString()
   @IsOptional()
   readonly category?: string;

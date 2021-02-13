@@ -1,46 +1,36 @@
-import { User, UserRole } from './entities/user.entity';
 import { UsersService } from './users.service';
-import { MockRepository } from '../podcast/podcasts.service.spec';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from 'src/jwt/jwt.service';
+import { User, UserRole } from './entities/user.entity';
 
-const mockRepository = () => ({
+const mockRepository = {
   findOne: jest.fn(),
-  findOneOrFail: jest.fn(),
-  create: jest.fn(),
   save: jest.fn(),
-  delete: jest.fn(),
-});
-const TEST_TOKEN = 'TEST_TOKEN';
-let mockJwtService = {
-  sign: jest.fn(() => TEST_TOKEN),
+  create: jest.fn(),
+  findOneOrFail: jest.fn(),
+};
+
+const mockJwtService = {
+  sign: jest.fn(() => 'signed-token-baby'),
   verify: jest.fn(),
 };
 
-const hostArgs = {
-  email: 'host@test.com',
-  password: 'password_host',
-  role: UserRole.Host,
-};
-
-const TEST_HOST = {
-  id: 123,
-  ...hostArgs,
-};
+type MockRepository<T = any> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
 describe('UsersService', () => {
   let service: UsersService;
-  let jwtService: JwtService;
   let userRepository: MockRepository<User>;
+  let jwtService: JwtService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const module = await Test.createTestingModule({
       providers: [
         UsersService,
         {
           provide: getRepositoryToken(User),
-          useValue: mockRepository(),
+          useValue: mockRepository,
         },
         {
           provide: JwtService,
@@ -50,248 +40,161 @@ describe('UsersService', () => {
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    userRepository = module.get(getRepositoryToken(User));
     jwtService = module.get<JwtService>(JwtService);
+    userRepository = module.get(getRepositoryToken(User));
   });
-
-  // why fucking does not work?
-  /*afterEach(() => {
-    jest.resetAllMocks();
-    jest.restoreAllMocks();
-  });*/
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-    expect(userRepository).toBeDefined();
-    expect(jwtService).toBeDefined();
   });
 
-  describe('createAccount Testing', () => {
-    it('should success to create User', async () => {
-      userRepository.findOne.mockResolvedValueOnce(null);
-      userRepository.create.mockReturnValueOnce(hostArgs);
-      userRepository.save.mockResolvedValue(TEST_HOST);
+  describe('createAccount', () => {
+    const createAccountArgs = {
+      email: 'aaa@aaa.com',
+      password: '1234',
+      role: UserRole.Host,
+    };
 
-      const result = await service.createAccount(hostArgs);
-
-      expect(userRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOne).toHaveBeenCalledWith({
-        email: hostArgs.email,
+    it('should fail if user exists', async () => {
+      userRepository.findOne.mockResolvedValue({
+        id: 1,
+        email: '',
       });
-      expect(userRepository.create).toHaveBeenCalledTimes(1);
-      expect(userRepository.create).toHaveBeenCalledWith(hostArgs);
-      expect(userRepository.save).toHaveBeenCalledTimes(1);
-      expect(userRepository.save).toHaveBeenCalledWith(hostArgs);
-      expect(result).toMatchObject({ ok: true, error: null });
-    });
-    it('should fail because of user existing', async () => {
-      userRepository.findOne.mockResolvedValueOnce(TEST_HOST);
-
-      const result = await service.createAccount(hostArgs);
-
-      expect(userRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOne).toHaveBeenCalledWith({
-        email: hostArgs.email,
-      });
-      expect(userRepository.create).toHaveBeenCalledTimes(0);
-      expect(userRepository.save).toHaveBeenCalledTimes(0);
+      const result = await service.createAccount(createAccountArgs);
       expect(result).toMatchObject({
         ok: false,
         error: `There is a user with that email already`,
       });
     });
-    it('should fail because of saving failed', async () => {
-      userRepository.findOne.mockResolvedValueOnce(null);
-      userRepository.create.mockReturnValueOnce(hostArgs);
-      userRepository.save.mockRejectedValueOnce(
-        new Error('Mocked Error on createAccount'),
-      );
 
-      const result = await service.createAccount(hostArgs);
+    it('should create a new user', async () => {
+      userRepository.findOne.mockResolvedValue(undefined);
+      userRepository.create.mockReturnValue(createAccountArgs);
 
-      expect(userRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOne).toHaveBeenCalledWith({
-        email: hostArgs.email,
-      });
+      const result = await service.createAccount(createAccountArgs);
+
       expect(userRepository.create).toHaveBeenCalledTimes(1);
-      expect(userRepository.create).toHaveBeenCalledWith(hostArgs);
+      expect(userRepository.create).toHaveBeenCalledWith(createAccountArgs);
+
       expect(userRepository.save).toHaveBeenCalledTimes(1);
-      expect(userRepository.save).toHaveBeenCalledWith(hostArgs);
-      expect(result).toMatchObject({
-        ok: false,
-        error: 'Could not create account',
+      expect(userRepository.save).toHaveBeenCalledWith(createAccountArgs);
+      expect(result).toEqual({
+        ok: true,
+        error: null,
       });
+    });
+
+    it('should fail on exception', async () => {
+      userRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.createAccount(createAccountArgs);
+      expect(result).toEqual({ ok: false, error: 'Could not create account' });
     });
   });
 
-  describe('login Testing', () => {
-    const findOneOptions = { select: ['id', 'password'] };
-    const findOneArgs = [{ email: hostArgs.email }, { ...findOneOptions }];
+  describe('login', () => {
+    const loginArgs = {
+      email: 'aaa@aaa.com',
+      password: '1234',
+    };
+    it('should fail if user does not exist', async () => {
+      userRepository.findOne.mockResolvedValue(null);
 
-    it('should succuess to login', async () => {
-      const passwordSuccessUser = {
-        ...TEST_HOST,
-        checkPassword: jest.fn(() => Promise.resolve(true)),
-      };
-      userRepository.findOne.mockResolvedValueOnce(passwordSuccessUser);
-      const result = await service.login({ ...hostArgs });
-
-      expect(userRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOne).toHaveBeenCalledWith(...findOneArgs);
-      expect(passwordSuccessUser.checkPassword).toHaveBeenCalledTimes(1);
-      expect(passwordSuccessUser.checkPassword).toHaveBeenCalledWith(
-        hostArgs.password,
+      const result = await service.login(loginArgs);
+      expect(userRepository.findOne).toHaveBeenCalledTimes(4);
+      expect(userRepository.findOne).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.any(Object),
       );
-      expect(jwtService.sign).toHaveBeenCalledTimes(1);
-      expect(jwtService.sign).toHaveBeenCalledWith(TEST_HOST.id);
-
-      expect(result).toMatchObject({ ok: true, token: TEST_TOKEN });
+      expect(result).toEqual({ ok: false, error: 'User not found' });
     });
-    it('should fail to login, becuase of findOne failed', async () => {
-      const newError = new Error('Mocked Error on login');
-      userRepository.findOne.mockRejectedValueOnce(newError);
-      const result = await service.login({ ...hostArgs });
 
-      expect(userRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOne).toHaveBeenCalledWith(...findOneArgs);
-
-      //expect(jwtService.sign).toHaveBeenCalledTimes(0);
-
-      expect(result).toMatchObject({ ok: false, error: newError });
-    });
-    it('should fail to login because of wrong password', async () => {
-      const passwordFailedUser = {
-        ...TEST_HOST,
+    it('should fail if the password is wrong', async () => {
+      const mockedUser = {
         checkPassword: jest.fn(() => Promise.resolve(false)),
       };
-      userRepository.findOne.mockResolvedValueOnce(passwordFailedUser);
-      const result = await service.login({ ...hostArgs });
-
-      expect(userRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOne).toHaveBeenCalledWith(...findOneArgs);
-      expect(passwordFailedUser.checkPassword).toHaveBeenCalledTimes(1);
-      expect(passwordFailedUser.checkPassword).toHaveBeenCalledWith(
-        hostArgs.password,
-      );
-      // error..???
-      //expect(jwtService.sign).toHaveBeenCalledTimes(0);
-
-      expect(result).toMatchObject({ ok: false, error: 'Wrong password' });
+      userRepository.findOne.mockResolvedValue(mockedUser);
+      const result = await service.login(loginArgs);
+      expect(result).toEqual({
+        ok: false,
+        error: 'Wrong password',
+      });
     });
-    it('should fail to login, becuase of non existing user', async () => {
-      userRepository.findOne.mockResolvedValueOnce(null);
-      const result = await service.login({ ...hostArgs });
 
-      expect(userRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOne).toHaveBeenCalledWith(...findOneArgs);
+    it('sholud return token if password correct', async () => {
+      const mockedUser = {
+        id: 1,
+        checkPassword: jest.fn(() => Promise.resolve(true)),
+      };
+      userRepository.findOne.mockResolvedValue(mockedUser);
+      const result = await service.login(loginArgs);
+      expect(jwtService.sign).toHaveBeenCalledTimes(1);
+      expect(jwtService.sign).toHaveBeenCalledWith(expect.any(Number));
+      expect(result).toEqual({
+        ok: true,
+        token: 'signed-token-baby',
+      });
+    });
 
-      //expect(jwtService.sign).toHaveBeenCalledTimes(0);
-
-      expect(result).toMatchObject({ ok: false, error: 'User not found' });
+    it('should fail on exception', async () => {
+      userRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.login(loginArgs);
+      expect(result).toEqual({ ok: false, error: 'Can`t log user in.' });
     });
   });
 
-  describe('findById Testing', () => {
-    const { id } = TEST_HOST;
-    it('should success to findById', async () => {
-      userRepository.findOneOrFail.mockResolvedValueOnce(TEST_HOST);
-      const result = await service.findById(id);
-
-      expect(userRepository.findOneOrFail).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOneOrFail).toHaveBeenCalledWith({ id });
-      expect(result).toMatchObject({ ok: true, user: TEST_HOST });
+  describe('findById', () => {
+    const findByIdArgs = { id: 1 };
+    it('should find an existing user', async () => {
+      userRepository.findOneOrFail.mockResolvedValue(findByIdArgs);
+      const result = await service.findById(1);
+      expect(result).toEqual({ ok: true, user: findByIdArgs });
     });
-    it('should fail to findById because of findOneOrFail failed', async () => {
-      userRepository.findOneOrFail.mockRejectedValueOnce(
-        new Error('Mocked Error from findById'),
-      );
-      const result = await service.findById(id);
 
-      expect(userRepository.findOneOrFail).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOneOrFail).toHaveBeenCalledWith({ id });
-      expect(result).toMatchObject({ ok: false, error: 'User Not Found' });
+    it('should fail if no user is found', async () => {
+      userRepository.findOneOrFail.mockRejectedValue(new Error());
+      const result = await service.findById(1);
+      expect(result).toEqual({ ok: false, error: 'User Not Found' });
     });
   });
 
-  describe('editProfile Testing', () => {
-    const updateArgs = {
-      email: 'willUpdate',
-      password: 'willUpdate',
-    };
-
-    it('should success to edit profile', async () => {
-      userRepository.findOneOrFail.mockResolvedValueOnce(TEST_HOST);
-
-      const result = await service.editProfile(TEST_HOST.id, updateArgs);
-      const expectedSaveArgs = { ...TEST_HOST, ...updateArgs };
-      expect(userRepository.findOneOrFail).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOneOrFail).toHaveBeenCalledWith(TEST_HOST.id);
-      expect(userRepository.save).toHaveBeenCalledTimes(1);
-      expect(userRepository.save).toHaveBeenCalledWith(expectedSaveArgs);
-      expect(result).toMatchObject({ ok: true });
-    });
-
-    it('should success to edit profile with only email address', async () => {
-      const updateArgs = {
-        email: 'willUpdate',
+  describe('editProfile', () => {
+    it('should change email', async () => {
+      const oldUser = {
+        email: 'aaa@aaa.com',
       };
-      userRepository.findOneOrFail.mockResolvedValueOnce(TEST_HOST);
-
-      const result = await service.editProfile(TEST_HOST.id, updateArgs);
-      const expectedSaveArgs = { ...TEST_HOST, ...updateArgs };
-      expect(userRepository.findOneOrFail).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOneOrFail).toHaveBeenCalledWith(TEST_HOST.id);
-      expect(userRepository.save).toHaveBeenCalledTimes(1);
-      expect(userRepository.save).toHaveBeenCalledWith(expectedSaveArgs);
-      expect(result).toMatchObject({ ok: true });
-    });
-
-    it('should success to edit profile with only password', async () => {
-      const updateArgs = {
-        password: 'willUpdate',
+      const editProfileArgs = {
+        userId: 1,
+        input: { email: 'bbb@bbb.com' },
       };
-      userRepository.findOneOrFail.mockResolvedValueOnce(TEST_HOST);
-
-      const result = await service.editProfile(TEST_HOST.id, updateArgs);
-      const expectedSaveArgs = { ...TEST_HOST, ...updateArgs };
-      expect(userRepository.findOneOrFail).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOneOrFail).toHaveBeenCalledWith(TEST_HOST.id);
-      expect(userRepository.save).toHaveBeenCalledTimes(1);
-      expect(userRepository.save).toHaveBeenCalledWith(expectedSaveArgs);
-      expect(result).toMatchObject({ ok: true });
-    });
-
-    it('should fail to edit profile because of user matching failed', async () => {
-      userRepository.findOneOrFail.mockRejectedValueOnce(
-        new Error('Mocked Error on editProfile'),
+      userRepository.findOne.mockResolvedValue(oldUser);
+      await service.editProfile(editProfileArgs.userId, editProfileArgs.input);
+      expect(userRepository.findOne).toHaveBeenCalledTimes(8);
+      expect(userRepository.findOne).toHaveBeenCalledWith(
+        editProfileArgs.userId,
       );
+    });
 
-      const result = await service.editProfile(TEST_HOST.id, updateArgs);
-      expect(userRepository.findOneOrFail).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOneOrFail).toHaveBeenCalledWith(TEST_HOST.id);
-      expect(userRepository.save).toHaveBeenCalledTimes(0);
-
-      expect(result).toMatchObject({
-        ok: false,
-        error: 'Could not update profile',
+    it('should change password', async () => {
+      const editProfileArgs = {
+        userId: 1,
+        input: { password: 'new' },
+      };
+      userRepository.findOne.mockResolvedValue({ password: 'old' });
+      const result = await service.editProfile(
+        editProfileArgs.userId,
+        editProfileArgs.input,
+      );
+      expect(userRepository.save).toHaveBeenCalledTimes(3);
+      expect(userRepository.save).toHaveBeenCalledWith(editProfileArgs.input);
+      expect(result).toEqual({
+        ok: true,
       });
     });
-    it('should fail to edit profile because of saving failed', async () => {
-      userRepository.findOneOrFail.mockResolvedValueOnce(TEST_HOST);
-      userRepository.save.mockRejectedValueOnce(
-        new Error('Mocked error on editProfile'),
-      );
 
-      const result = await service.editProfile(TEST_HOST.id, updateArgs);
-      const expectedSaveArgs = { ...TEST_HOST, ...updateArgs };
-      expect(userRepository.findOneOrFail).toHaveBeenCalledTimes(1);
-      expect(userRepository.findOneOrFail).toHaveBeenCalledWith(TEST_HOST.id);
-      expect(userRepository.save).toHaveBeenCalledTimes(1);
-      expect(userRepository.save).toHaveBeenCalledWith(expectedSaveArgs);
-      expect(result).toMatchObject({
-        ok: false,
-        error: 'Could not update profile',
-      });
+    it('should fail on exception', async () => {
+      userRepository.findOne.mockRejectedValue(new Error());
+      const result = await service.editProfile(1, { email: null });
+      expect(result).toEqual({ ok: false, error: 'Could not update profile' });
     });
   });
 });

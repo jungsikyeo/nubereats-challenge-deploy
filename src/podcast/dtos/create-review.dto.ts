@@ -1,16 +1,18 @@
-import { Field, InputType, Int, ObjectType, PickType } from "@nestjs/graphql";
-import { Review } from "../entities/review.entity";
-import { CoreOutput } from "./output.dto";
-import { IsNumber } from "class-validator";
+import { Entity } from 'typeorm';
+import { Field, InputType, Int, ObjectType, PickType } from '@nestjs/graphql';
+import { CoreOutput } from './output.dto';
+import { IsInt } from 'class-validator';
+import { Review } from '../entities/review.entity';
 
+@Entity()
 @InputType()
 export class CreateReviewInput extends PickType(
   Review,
-  ["title", "text"],
-  InputType
+  ['title', 'reviewText'],
+  InputType,
 ) {
-  @Field(() => Number)
-  @IsNumber()
+  @Field((type) => Int)
+  @IsInt()
   podcastId: number;
 }
 
