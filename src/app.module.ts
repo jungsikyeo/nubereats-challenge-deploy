@@ -34,7 +34,7 @@ import { ConfigModule } from '@nestjs/config';
     TypeOrmModule.forRoot({
       type: 'postgres',
       ...(process.env.DATABASE_URL
-          ? { url: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+          ? { url: process.env.DATABASE_URL }
           : {
             host: process.env.DB_HOST,
             port: +process.env.DB_PORT,
@@ -47,7 +47,6 @@ import { ConfigModule } from '@nestjs/config';
       entities: [Podcast, Episode, User, Review],
     }),
     GraphQLModule.forRoot({
-      //playground: process.env.NODE_ENV !== 'production',
       autoSchemaFile: true,
       context: ({ req }) => ({ user: req['user'] }),
     }),
