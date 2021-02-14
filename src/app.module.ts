@@ -14,6 +14,7 @@ import { User } from "./users/entities/user.entity";
 import { JwtMiddleware } from "./jwt/jwt.middleware";
 import { Review } from "./podcast/entities/review.entity";
 import { ConfigModule } from "@nestjs/config";
+import { SpotifyModule } from './spotify/spotify.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { ConfigModule } from "@nestjs/config";
     PodcastsModule,
     UsersModule,
     AuthModule,
+    SpotifyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
