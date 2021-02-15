@@ -54,6 +54,7 @@ export class SpotifyController {
                   );*/
                   let track = {
                     title: item.name,
+                    category: "",
                     imageUrl: item.album.images[0].url,
                     playTime: item.duration_ms,
                   };
@@ -62,7 +63,7 @@ export class SpotifyController {
                 console.log(trackList);
                 console.log(data.body.tracks.next);
                 return {
-                  tracks: trackList,
+                  episodes: trackList,
                   nextUrl: data.body.tracks.next,
                 };
               },
