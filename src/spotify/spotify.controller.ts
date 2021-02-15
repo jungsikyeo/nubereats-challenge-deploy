@@ -3,29 +3,8 @@ import { Controller } from "@nestjs/common";
 
 @Controller("spotify")
 export class SpotifyController {
-  @Get("/api/callback")
-  getApiCallback(@Req() request) {
-    console.log(request.body);
-    /*
-    const SpotifyWebApi = require("spotify-web-api-node");
-    const code = "MQCbtKe23z7YzzS44KzZzZgjQa621hgSzHN";
-    const credentials = {
-      clientId: "65cf8050ccf243b3a3b78d3f711fe6f2",
-      clientSecret: "009a72ffec404e5c94c5d8bc2859264a",
-      //Either here
-      accessToken: code,
-    };
-
-    const spotifyApi = new SpotifyWebApi(credentials);
-
-    //Or with a method
-    spotifyApi.setAccessToken(code);*/
-
-    return null;
-  }
-
   @Get("/api/auth")
-  spotifyAPI() {
+  async spotifyAPI(@Req() request) {
     const SpotifyWebApi = require("spotify-web-api-node");
     const scopes = ["user-read-private", "user-read-email"],
       redirectUri = "http://localhost:4000/spotify/api/callback",
@@ -48,31 +27,51 @@ export class SpotifyController {
       responseType
     );
 
-    console.log(authorizeURL);
-
+    let items = {};
     if (authorizeURL) {
-      //localStorage.setItem("spotify_access_token", "")
-
-      spotifyApi.clientCredentialsGrant().then(
-        function (data) {
-          console.log("The access token is " + data.body["access_token"]);
-          spotifyApi.setAccessToken(data.body["access_token"]);
-        },
-        function (err) {
-          console.log("Something went wrong!", err);
-        }
-      );
+      items = spotifyApi
+        .clientCredentialsGrant()
+        .then(
+          async (data) => {
+            console.log(data.body["access_token"]);
+            await spotifyApi.setAccessToken(data.body["access_token"]);
+          },
+          (err) => {
+            console.log("Something went wrong!", err);
+          }
+        )
+        .then(
+          async () =>
+            await spotifyApi.searchTracks(request?.query?.searchText).then(
+              (data) => {
+                let trackList = [];
+                data.body.tracks.items.forEach((item) => {
+                  //console.log(item);
+                  /*console.log(
+                    item.name,
+                    item.album.images[0].url,
+                    item.duration_ms
+                  );*/
+                  let track = {
+                    title: item.name,
+                    imageUrl: item.album.images[0].url,
+                    playTime: item.duration_ms,
+                  };
+                  trackList.push(track);
+                });
+                console.log(trackList);
+                console.log(data.body.tracks.next);
+                return {
+                  tracks: trackList,
+                  nextUrl: data.body.tracks.next,
+                };
+              },
+              (err) => {
+                console.error(err);
+              }
+            )
+        );
     }
-    /*
-
-
-    spotifyApi.getArtistAlbums("43ZHCT0cAZBISjO8DG9PnE").then(
-      function (data) {
-        console.log("Artist albums", data.body);
-      },
-      function (err) {
-        console.error(err);
-      }
-    );*/
+    return items;
   }
 }
