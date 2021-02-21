@@ -32,7 +32,7 @@ export class SpotifyController {
   @Get("/api/callback")
   getApiToken() {
     try {
-      return axios.get("http://152.67.198.254:5000/token");
+      return axios.get("https://code.yjsworld.tk/token");
     } catch (error) {
       console.error(error);
     }
