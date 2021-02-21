@@ -31,11 +31,20 @@ const spotifyApi = new SpotifyWebApi({
 export class SpotifyController {
   @Get("/api/callback")
   getApiToken() {
-    try {
-      return axios.get("https://code.yjsworld.tk/token");
-    } catch (error) {
-      console.error(error);
-    }
+    const makeRequest = async () => {
+      try {
+        const response = await axios.get("https://code.yjsworld.tk/token");
+        if (response.status === 200) {
+          // response - object, eg { status: 200, message: 'OK' }
+          console.log(response.data);
+          return response.data;
+        }
+        return { error: response.statusText };
+      } catch (err) {
+        return { error: err.message };
+      }
+    };
+    return makeRequest();
   }
 
   @Get("/api/auth")
