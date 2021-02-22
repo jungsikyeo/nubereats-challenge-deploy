@@ -60,8 +60,8 @@ export class SpotifyController {
 
     if (authorizeURL) {
       const token = await this.getApiToken();
-      console.log(token.data);
-      spotifyApi.setAccessToken(token.data);
+      console.log(token);
+      spotifyApi.setAccessToken(token);
       items = await spotifyApi.searchTracks(request?.query?.searchText).then(
         (data) => {
           let trackList = [];
