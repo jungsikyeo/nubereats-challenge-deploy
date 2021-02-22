@@ -62,29 +62,34 @@ export class SpotifyController {
       const token = await this.getApiToken();
       console.log(token);
       spotifyApi.setAccessToken(token);
-      items = await spotifyApi.searchTracks(request?.query?.searchText).then(
-        (data) => {
-          let trackList = [];
-          data.body.tracks.items.forEach((item) => {
-            //console.log(item);
-            let track = {
-              title: item.name,
-              category: item.album.name,
-              imageUrl: item.album.images[0].url,
-              playTime: item.duration_ms,
-              playId: item.uri,
+      items = await spotifyApi
+        .searchTracks(request?.query?.searchText, {
+          limit: 20,
+          offset: request?.query?.offset,
+        })
+        .then(
+          (data) => {
+            let trackList = [];
+            data.body.tracks.items.forEach((item) => {
+              //console.log(item);
+              let track = {
+                title: item.name,
+                category: item.album.name,
+                imageUrl: item.album.images[0].url,
+                playTime: item.duration_ms,
+                playId: item.uri,
+              };
+              trackList.push(track);
+            });
+            return {
+              episodes: trackList,
+              nextUrl: data.body.tracks.next,
             };
-            trackList.push(track);
-          });
-          return {
-            episodes: trackList,
-            nextUrl: data.body.tracks.next,
-          };
-        },
-        (err) => {
-          console.error(err);
-        }
-      );
+          },
+          (err) => {
+            console.error(err);
+          }
+        );
     }
     return items;
   }
