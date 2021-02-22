@@ -218,6 +218,7 @@ export class PodcastsService {
     category,
     imageUrl,
     playTime,
+    playId,
   }: CreateEpisodeInput): Promise<CreateEpisodeOutput> {
     try {
       const { podcast, ok, error } = await this.getPodcast(podcastId);
@@ -229,6 +230,7 @@ export class PodcastsService {
         category,
         imageUrl,
         playTime,
+        playId,
       });
       newEpisode.podcast = podcast;
       const { id } = await this.episodeRepository.save(newEpisode);

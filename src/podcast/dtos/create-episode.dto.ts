@@ -6,7 +6,7 @@ import { CoreOutput } from "./output.dto";
 @InputType()
 export class CreateEpisodeInput extends PickType(
   Episode,
-  ["title", "category", "imageUrl", "playTime"],
+  ["title", "category", "imageUrl", "playTime", "playId"],
   InputType
 ) {
   @Field((type) => Int)

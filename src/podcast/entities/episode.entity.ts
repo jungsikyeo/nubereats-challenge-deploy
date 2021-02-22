@@ -29,6 +29,11 @@ export class Episode extends CoreEntity {
   @IsOptional()
   playTime?: number;
 
+  @Column({ default: "" })
+  @Field((type) => String, { defaultValue: "" })
+  @IsString()
+  playId: string;
+
   @ManyToOne(() => Podcast, (podcast) => podcast.episodes, {
     onDelete: "CASCADE",
   })
