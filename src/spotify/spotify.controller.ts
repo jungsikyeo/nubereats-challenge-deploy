@@ -66,13 +66,13 @@ export class SpotifyController {
         (data) => {
           let trackList = [];
           data.body.tracks.items.forEach((item) => {
-            console.log(item);
+            //console.log(item);
             let track = {
               title: item.name,
               category: item.album.name,
               imageUrl: item.album.images[0].url,
               playTime: item.duration_ms,
-              playId: item.id,
+              playId: item.uri,
             };
             trackList.push(track);
           });
